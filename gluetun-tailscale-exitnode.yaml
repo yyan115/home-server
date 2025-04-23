@@ -1,0 +1,46 @@
+version: "3"
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER= # e.g., surfshark, mullvad, etc
+      - VPN_TYPE= # e.g., wireguard
+      - WIREGUARD_PRIVATE_KEY= # your private key
+      - WIREGUARD_ADDRESSES= # e.g., 10.64.0.2/32
+      - SERVER_CITIES= # Set a server
+      - UPDATER_PERIOD=24h
+      - DOT=off
+      - HEALTH_SUCCESS_WAIT_DURATION=2h
+      - FIREWALL_OUTBOUND_SUBNETS=100.64.0.0/10
+  tailscale:
+    image: tailscale/tailscale
+    container_name: tailscale
+    network_mode: service:gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./tailscale/var/lib:/var/lib
+      - ./tailscale/state:/state
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_HOSTNAME= # Replace with host name
+      - TS_AUTHKEY= # Replace with tailscale auth key
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container --login-server=https://controlplane.tailscale.com --advertise-exit-node
+      - TS_ROUTES=100.64.0.0/10
+      - TS_NO_LOGS_NO_SUPPORT=true
+      - TS_STATE_DIR=/state
+    depends_on:
+      gluetun:
+        condition: service_healthy
+
+networks: {}

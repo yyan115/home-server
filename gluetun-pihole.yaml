@@ -1,0 +1,41 @@
+# Combines Gluetun with Pi-hole to allow DNS queries through a VPN tunnel.
+
+version: "3.0"
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun-pihole
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./pihole_gluetun/gluetun:/gluetun
+    ports:
+      - 443:443/tcp
+      - 53:53/tcp
+      - 53:53/udp
+      - 6050:80/tcp # Pi-hole web UI
+    environment:
+      - VPN_SERVICE_PROVIDER= # e.g., surfshark, mullvad, etc
+      - VPN_TYPE= # e.g., wireguard
+      - WIREGUARD_PRIVATE_KEY= # your private key
+      - WIREGUARD_ADDRESSES= # e.g., 10.64.0.2/32
+      - SERVER_CITIES= # Set a server
+      - UPDATER_PERIOD=24h
+      - DOT=off
+      - HEALTH_SUCCESS_WAIT_DURATION=2h
+      - DNS_PLAINTEXT_ADDRESS=127.0.0.1
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    network_mode: service:gluetun
+    environment:
+      - TZ= # your timezone
+      - FTLCONF_webserver_api_password= # optional: web UI password
+    volumes:
+      - ./pihole_gluetun/pihole/etc-pihole:/etc/pihole
+      - ./pihole_gluetun/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+    restart: unless-stopped

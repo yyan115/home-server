@@ -1,0 +1,18 @@
+---
+- name: Install ArgoCD on K3s
+  hosts: homeserver
+  tasks:
+    - name: Create argocd namespace
+      kubernetes.core.k8s:
+        kubeconfig: /home/adminr/.kube/config
+        name: argocd
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Install ArgoCD
+      kubernetes.core.k8s:
+        kubeconfig: /home/adminr/.kube/config
+        state: present
+        src: https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        namespace: argocd
